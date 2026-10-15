@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .nav-item.active { background-color: #1e293b; border-left: 4px solid #3b82f6; }
+        
+        /* Area khusus cetak (Print) */
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;}
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="loginPage" class="min-h-screen flex items-center justify-center bg-slate-800">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-8">
+                <!-- Logo ditambahkan di sini -->
+                <img id="loginLogo" src="WhatsApp Image 2026-10-06 at 10.11.18_2.jpeg" alt="Logo Instansi" class="w-24 h-24 mx-auto mb-4 object-contain rounded-full shadow-lg border-2 border-blue-500">
+                <h1 class="text-2xl font-bold text-gray-800">Login Administrator</h1>
+                <p class="text-sm text-gray-500 mt-1">Sistem Absensi QR Code</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-gray-400"></i>
+                        <input type="password" id="inputPassword" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Masukkan password admin">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">Hint: <span class="font-mono bg-gray-100 px-1 rounded">admin123</span></p>
+                </div>
+                <button onclick="login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2">
+                    <i class="fas fa-sign-in-alt"></i> Masuk
+                </button>
+                <p id="loginError" class="text-red-500 text-sm text-center hidden mt-2">Password salah!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden h-screen flex overflow-hidden bg-gray-50">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 z-20">
+            <div class="p-5 border-b border-slate-800 flex items-center gap-3">
+                <!-- Logo ditambahkan di Sidebar -->
+                <img id="sidebarLogo" src="WhatsApp Image 2026-10-06 at 10.11.18_2.jpeg" alt="Logo" class="w-10 h-10 object-contain rounded-full bg-white p-0.5">
+                <div>
+                    <h2 id="sidebarTitle" class="font-bold text-lg leading-tight">Admin Panel</h2>
+                    <p id="sidebarSubtitle" class="text-xs text-slate-400">Sistem Absensi</p>
+                </div>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto py-4">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="#" onclick="switchMenu('dashboard')" id="nav-dashboard" class="nav-item active flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-home w-5 text-center"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="switchMenu('input')" id="nav-input" class="nav-item flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-users w-5 text-center"></i> Input Data Siswa
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="switchMenu('cetak')" id="nav-cetak" class="nav-item flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-print w-5 text-center"></i> Cetak QR Code
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="switchMenu('scan')" id="nav-scan" class="nav-item flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-camera w-5 text-center"></i> Scan QR Code
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="switchMenu('rekap')" id="nav-rekap" class="nav-item flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-file-alt w-5 text-center"></i> Rekap Absensi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" onclick="switchMenu('pengaturan')" id="nav-pengaturan" class="nav-item flex items-center gap-3 px-5 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+                            <i class="fas fa-cog w-5 text-center"></i> Pengaturan
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-800">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 rounded hover:bg-red-600 hover:text-white transition-colors text-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 flex flex-col relative overflow-hidden">
+            <!-- Toast Notification -->
+            <div id="toastMessage" class="absolute top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg text-sm opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-3 transform translate-y-[-20px]">
+                <i class="fas fa-check-circle text-lg"></i> <span id="toastText" class="font-medium">Notifikasi</span>
+            </div>
+
+            <!-- Header Mobile Toggle (Optional for future responsiveness) -->
+            <header class="bg-white shadow-sm border-b px-6 py-4 flex justify-between items-center z-10">
+                <h2 id="pageTitle" class="text-xl font-bold text-gray-800">Dashboard</h2>
+                <div class="text-sm text-gray-500 font-medium" id="currentDate"></div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 custom-scrollbar relative">
+                
+                <!-- Halaman: Dashboard -->
+                <div id="page-dashboard" class="page-content block">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-blue-500">
+                            <div class="bg-blue-100 p-3 rounded-lg text-blue-600">
+                                <i class="fas fa-users text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Total Siswa Terdaftar</p>
+                                <h3 id="dashTotalSiswa" class="text-2xl font-bold text-gray-800">0</h3>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-green-500">
+                            <div class="bg-green-100 p-3 rounded-lg text-green-600">
+                                <i class="fas fa-check-circle text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 font-medium">Hadir Hari Ini</p>
+                                <h3 id="dashTotalHadir" class="text-2xl font-bold text-gray-800">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Aktivitas Scan Terbaru</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 rounded-tl-lg">Waktu</th>
+                                        <th class="px-4 py-3">NIS</th>
+                                        <th class="px-4 py-3 rounded-tr-lg">Nama Siswa</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashTableBody" class="divide-y">
+                                    <!-- Data akan di-render di sini -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman: Input Data Siswa -->
+                <div id="page-input" class="page-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Form Tambah -->
+                        <div class="lg:col-span-1">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                                <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Tambah Siswa</h3>
+                                <form id="formAddSiswa" onsubmit="addSiswa(event)">
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">NIS</label>
+                                            <input type="text" id="inpNis" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Masukkan NIS unik">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                                            <input type="text" id="inpNama" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nama lengkap siswa">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Kelas (Opsional)</label>
+                                            <input type="text" id="inpKelas" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: X RPL 1">
+                                        </div>
+                                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors">
+                                            <i class="fas fa-save mr-1"></i> Simpan Data
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <!-- Tabel Data Siswa -->
+                        <div class="lg:col-span-2">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
+                                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                                    <h3 class="text-lg font-bold text-gray-800">Daftar Siswa</h3>
+                                    <span id="badgeTotalSiswa" class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">0 Siswa</span>
+                                </div>
+                                <div class="overflow-x-auto flex-1">
+                                    <table class="w-full text-sm text-left">
+                                        <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3">NIS</th>
+                                                <th class="px-4 py-3">Nama</th>
+                                                <th class="px-4 py-3">Kelas</th>
+                                                <th class="px-4 py-3 text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tableSiswa" class="divide-y">
+                                            <!-- Data Siswa -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman: Cetak QR Code -->
+                <div id="page-cetak" class="page-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-2 gap-4">
+                            <h3 class="text-lg font-bold text-gray-800">Manajemen QR Code</h3>
+                            <div class="relative w-full sm:w-64">
+                                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                                <input type="text" id="searchCetak" onkeyup="renderTableCetak()" placeholder="Cari Nama/NIS..." class="w-full pl-9 pr-3 py-1.5 text-sm border rounded-lg focus:ring-blue-500 outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-500 uppercase bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3">NIS</th>
+                                        <th class="px-4 py-3">Nama Siswa</th>
+                                        <th class="px-4 py-3 text-center">QR Code</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableCetak" class="divide-y">
+                                    <!-- Data untuk cetak -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman: Scan QR Code -->
+                <div id="page-scan" class="page-content hidden h-full flex flex-col">
+                    <div class="max-w-2xl mx-auto w-full flex-1 flex flex-col">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col items-center">
+                            <div class="text-center mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Scanner Kehadiran</h3>
+                                <p class="text-sm text-gray-500">Arahkan kamera ke QR Code milik siswa</p>
+                            </div>
+                            
+                            <div id="scannerWrapper" class="w-full max-w-sm bg-black rounded-xl overflow-hidden shadow-inner aspect-square mb-6 relative flex items-center justify-center">
+                                <div id="reader" class="w-full h-full"></div>
+                                <div id="scannerOverlay" class="absolute inset-0 bg-slate-900 bg-opacity-80 flex flex-col items-center justify-center text-white z-10">
+                                    <i class="fas fa-camera text-4xl mb-2 text-slate-400"></i>
+                                    <p class="text-sm font-medium">Kamera Nonaktif</p>
+                                </div>
+                            </div>
+
+                            <button id="btnToggleCamera" onclick="toggleScanner()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-full transition-colors flex items-center gap-2 shadow-md">
+                                <i class="fas fa-play"></i> Mulai Scan
+                            </button>
+                            
+                            <!-- Last Scan Info -->
+                            <div id="lastScanInfo" class="mt-6 w-full bg-green-50 border border-green-200 p-4 rounded-lg hidden">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-green-500 text-white p-2 rounded-full">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-green-700 font-bold uppercase">Berhasil Direkam</p>
+                                        <p id="scanName" class="text-lg font-bold text-gray-800"></p>
+                                        <p id="scanWaktu" class="text-sm text-gray-600"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Halaman: Rekap -->
+                <div id="page-rekap" class="page-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col h-[calc(100vh-150px)]">
+                        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 border-b pb-4 gap-4">
+                            <h3 class="text-lg font-bold text-gray-800">Rekapitulasi Kehadiran</h3>
+                            <div class="flex gap-2">
+                                <input type="date" id="filterDate" onchange="renderTableRekap()" class="border px-3 py-1.5 rounded-lg text-sm outline-none focus:ring-blue-500">
+                                <button onclick="exportCSV()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                    <i class="fas fa-file-excel"></i> Export CSV
+                                </button>
+                                <button onclick="clearAbsensi()" class="bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" title="Hapus Semua Data Absensi">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-auto flex-1 custom-scrollbar">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-500 uppercase bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-3">Tanggal</th>
+                                        <th class="px-4 py-3">Waktu</th>
+                                        <th class="px-4 py-3">NIS</th>
+                                        <th class="px-4 py-3">Nama Siswa</th>
+                                        <th class="px-4 py-3">Kelas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableRekap" class="divide-y">
+                                    <!-- Data Rekap -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Halaman: Pengaturan -->
+                <div id="page-pengaturan" class="page-content hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-lg">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Pengaturan Aplikasi</h3>
+                        <form id="formSettings" onsubmit="saveSettings(event)">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Judul Aplikasi</label>
+                                    <input type="text" id="inpSetTitle" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Admin Panel">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Identitas Instansi</label>
+                                    <input type="text" id="inpSetSubtitle" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: SMPN 1 Maju Jaya">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">URL Web App Google Sheets (Opsional)</label>
+                                    <input type="url" id="inpSetSheetUrl" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://script.google.com/macros/s/.../exec">
+                                    <p class="text-xs text-gray-500 mt-1">Kosongkan jika hanya ingin menyimpan data di aplikasi (tidak terhubung ke Spreadsheet online).</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Logo Instansi (Opsional)</label>
+                                    <input type="file" id="inpSetLogo" accept="image/*" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+                                    <p class="text-xs text-gray-500 mt-1">Format gambar (JPG, PNG). Ukuran Maksimal 1MB.</p>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-save mr-1"></i> Simpan Pengaturan
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-8 border-t border-gray-100 pt-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">Backup & Pemulihan Data</h3>
+                            <p class="text-sm text-gray-500 mb-4">Simpan cadangan data (Siswa, Absensi, Pengaturan) ke perangkat Anda untuk mencegah kehilangan data, atau pulihkan dari file cadangan.</p>
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <button type="button" onclick="backupData()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                    <i class="fas fa-download"></i> Cadangkan Data
+                                </button>
+                                <label class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-medium py-2 rounded-lg transition-colors flex justify-center items-center gap-2 cursor-pointer">
+                                    <i class="fas fa-upload"></i> Pulihkan Data
+                                    <input type="file" accept=".json" class="hidden" onchange="restoreData(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Legalitas -->
+            <div class="absolute bottom-4 right-6 z-10 pointer-events-none text-right">
+                <p class="text-xs text-gray-400 font-medium bg-white bg-opacity-70 px-2 py-1 rounded shadow-sm">by Kunti Kunanti, M.Pd.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Print QR -->
+    <div id="modalPrint" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div class="flex justify-between items-center p-4 border-b bg-gray-50">
+                <h3 class="font-bold text-gray-800">Preview Kartu QR</h3>
+                <button onclick="closeModalPrint()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 flex flex-col items-center">
+                <!-- Area yang akan di-print -->
+                <div id="printArea" class="border-2 border-gray-800 rounded-xl p-6 text-center w-64 bg-white shadow-sm">
+                    <h2 class="font-bold text-lg border-b-2 border-gray-800 pb-2 mb-4 uppercase">KARTU ABSENSI</h2>
+                    <div id="qrcodePreview" class="flex justify-center mb-4 p-2 border rounded bg-white"></div>
+                    <p id="printNama" class="font-bold text-gray-800 text-lg leading-tight mb-1">Nama Lengkap</p>
+                    <p id="printNis" class="text-gray-600 font-mono text-sm">NIS: 12345</p>
+                    <p id="printKelas" class="text-gray-500 text-xs mt-2 bg-gray-100 py-1 rounded">Kelas</p>
+                </div>
+                
+                <button onclick="doPrint()" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-colors flex justify-center items-center gap-2">
+                    <i class="fas fa-print"></i> Cetak Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data State (Disimpan di LocalStorage agar tidak hilang)
+        let students = JSON.parse(localStorage.getItem('absensi_students')) || [];
+        let attendance = JSON.parse(localStorage.getItem('absensi_data')) || [];
+        let appSettings = JSON.parse(localStorage.getItem('absensi_settings')) || { title: "Admin Panel", subtitle: "Sistem Absensi", sheetUrl: "", logo: "" };
+        
+        let html5QrcodeScanner = null;
+        let isScannerRunning = false;
+        let qrcodeInstance = null;
+
+        // Set Current Date in Header
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('id-ID', dateOptions);
+        
+        // Inisialisasi filter date rekap ke hari ini
+        document.getElementById('filterDate').valueAsDate = new Date();
+
+        // 1. Logika Login
+        function login(isAuto = false) {
+            const pass = isAuto ? 'admin123' : document.getElementById('inputPassword').value;
+            const err = document.getElementById('loginError');
+            
+            // Password custom: admin123
+            if (pass === 'admin123') {
+                localStorage.setItem('absensi_logged_in', 'true');
+                document.getElementById('loginPage').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                updateDashboard();
+                renderTableSiswa();
+                renderTableCetak();
+                renderTableRekap();
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            if(isScannerRunning) stopScanner();
+            localStorage.removeItem('absensi_logged_in');
+            document.getElementById('inputPassword').value = '';
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('loginPage').classList.remove('hidden');
+        }
+
+        // 2. Logika Navigasi Sidebar
+        function switchMenu(menuId) {
+            // Hentikan scanner jika pindah halaman
+            if(isScannerRunning && menuId !== 'scan') stopScanner();
+
+            // Sembunyikan semua konten
+            document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+            
+            // Reset active menu styling
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'bg-slate-800', 'border-l-4', 'border-blue-500'));
+            
+            // Tampilkan halaman terpilih
+            document.getElementById('page-' + menuId).classList.remove('hidden');
+            
+            // Set style active ke menu terpilih
+            const navBtn = document.getElementById('nav-' + menuId);
+            navBtn.classList.add('active', 'bg-slate-800');
+            navBtn.style.borderLeft = '4px solid #3b82f6';
+            
+            // Update Judul Header
+            const titles = {
+                'dashboard': 'Dashboard',
+                'input': 'Input Data Siswa',
+                'cetak': 'Cetak QR Code',
+                'scan': 'Scanner Kehadiran',
+                'rekap': 'Rekapitulasi Data',
+                'pengaturan': 'Pengaturan Aplikasi'
+            };
+            document.getElementById('pageTitle').innerText = titles[menuId];
+
+            // Refresh data spesifik saat halaman dibuka
+            if(menuId === 'dashboard') updateDashboard();
+            if(menuId === 'input') renderTableSiswa();
+            if(menuId === 'cetak') renderTableCetak();
+            if(menuId === 'rekap') renderTableRekap();
+            
+            // Langsung aktifkan kamera saat menu scan dibuka
+            if(menuId === 'scan') {
+                const overlay = document.getElementById('scannerOverlay');
+                const btn = document.getElementById('btnToggleCamera');
+                overlay.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-stop"></i> Tutup Kamera';
+                
+                // Pastikan class background tombol dalam state aktif/berwarna merah
+                if (btn.classList.contains('bg-blue-600')) {
+                    btn.classList.replace('bg-blue-600', 'bg-red-600');
+                    btn.classList.replace('hover:bg-blue-700', 'hover:bg-red-700');
+                }
+                startScanner();
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastMessage');
+            const text = document.getElementById('toastText');
+            const icon = toast.querySelector('i');
+            
+            text.innerText = message;
+            toast.style.transform = 'translateY(0)';
+            
+            if (isError) {
+                toast.classList.replace('bg-green-500', 'bg-red-500');
+                icon.className = 'fas fa-exclamation-triangle text-lg';
+            } else {
+                toast.classList.replace('bg-red-500', 'bg-green-500');
+                icon.className = 'fas fa-check-circle text-lg';
+            }
+
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                toast.style.transform = 'translateY(-20px)';
+            }, 3000);
+        }
+
+        // 3. Logika Input Data Siswa
+        function addSiswa(e) {
+            e.preventDefault();
+            const nis = document.getElementById('inpNis').value.trim();
+            const nama = document.getElementById('inpNama').value.trim();
+            const kelas = document.getElementById('inpKelas').value.trim() || '-';
+
+            // Cek duplikasi NIS
+            if (students.some(s => s.nis === nis)) {
+                showToast("NIS sudah terdaftar!", true);
+                return;
+            }
+
+            students.push({ nis, nama, kelas });
+            saveStudents();
+            renderTableSiswa();
+            
+            // Reset Form
+            document.getElementById('formAddSiswa').reset();
+            showToast("Data siswa berhasil ditambahkan");
+        }
+
+        function deleteSiswa(nis) {
+            if(confirm('Hapus data siswa ini?')) {
+                students = students.filter(s => s.nis !== nis);
+                saveStudents();
+                renderTableSiswa();
+                showToast("Data dihapus");
+            }
+        }
+
+        function saveStudents() {
+            localStorage.setItem('absensi_students', JSON.stringify(students));
+        }
+
+        function renderTableSiswa() {
+            const tbody = document.getElementById('tableSiswa');
+            document.getElementById('badgeTotalSiswa').innerText = `${students.length} Siswa`;
+            tbody.innerHTML = '';
+            
+            if(students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-400">Belum ada data siswa</td></tr>`;
+                return;
+            }
+
+            students.forEach(s => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="px-4 py-3 font-mono text-sm">${s.nis}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">${s.nama}</td>
+                        <td class="px-4 py-3 text-gray-600">${s.kelas}</td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="deleteSiswa('${s.nis}')" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition-colors" title="Hapus">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. Logika Cetak QR
+        function renderTableCetak() {
+            const keyword = document.getElementById('searchCetak').value.toLowerCase();
+            const tbody = document.getElementById('tableCetak');
+            tbody.innerHTML = '';
+            
+            const filtered = students.filter(s => 
+                s.nama.toLowerCase().includes(keyword) || s.nis.toLowerCase().includes(keyword)
+            );
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-400">Tidak ada data ditemukan</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(s => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="px-4 py-3 font-mono text-sm">${s.nis}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">
+                            ${s.nama} <br><span class="text-xs text-gray-500 font-normal">Kelas: ${s.kelas}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="previewQR('${s.nis}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors shadow-sm">
+                                <i class="fas fa-qrcode mr-1"></i> Tampilkan QR
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function previewQR(nis) {
+            const student = students.find(s => s.nis === nis);
+            if(!student) return;
+
+            document.getElementById('printNama').innerText = student.nama;
+            document.getElementById('printNis').innerText = `NIS: ${student.nis}`;
+            document.getElementById('printKelas').innerText = student.kelas;
+
+            const qrContainer = document.getElementById('qrcodePreview');
+            qrContainer.innerHTML = ""; 
+
+            // QR code hanya berisi NIS untuk keamanan (data lain ditarik dari db lokal saat scan)
+            qrcodeInstance = new QRCode(qrContainer, {
+                text: student.nis,
+                width: 150,
+                height: 150,
+                colorDark : "#1e293b",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('modalPrint').classList.remove('hidden');
+        }
+
+        function closeModalPrint() {
+            document.getElementById('modalPrint').classList.add('hidden');
+        }
+
+        function doPrint() {
+            window.print();
+        }
+
+        // 5. Logika Scanner
+        function toggleScanner() {
+            const overlay = document.getElementById('scannerOverlay');
+            const btn = document.getElementById('btnToggleCamera');
+
+            if (isScannerRunning) {
+                stopScanner();
+                overlay.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-play"></i> Mulai Scan';
+                btn.classList.replace('bg-red-600', 'bg-blue-600');
+                btn.classList.replace('hover:bg-red-700', 'hover:bg-blue-700');
+            } else {
+                overlay.classList.add('hidden');
+                startScanner();
+                btn.innerHTML = '<i class="fas fa-stop"></i> Tutup Kamera';
+                btn.classList.replace('bg-blue-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-blue-700', 'hover:bg-red-700');
+            }
+        }
+
+        function startScanner() {
+            if (isScannerRunning) return; // Cegah pemanggilan ganda jika scanner sudah jalan
+            
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                (errorMessage) => { 
+                    // Fungsi inline kosong ini mencegah pesan error spam di console ketika kamera belum mendeteksi QR
+                }
+            ).then(() => {
+                isScannerRunning = true;
+            }).catch((err) => {
+                showToast("Gagal mengakses kamera. Pastikan izin kamera diberikan.", true);
+                if (isScannerRunning) toggleScanner(); // reset ui
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    isScannerRunning = false;
+                    html5QrcodeScanner.clear();
+                }).catch(err => console.error("Error stopping scanner", err));
+            }
+        }
+
+        let lastScannedNis = "";
+        let lastScannedTime = 0;
+
+        function onScanSuccess(decodedText) {
+            const currentTime = new Date().getTime();
+            if (decodedText === lastScannedNis && (currentTime - lastScannedTime) < 3000) {
+                return; // Hindari scan ganda berulang dalam 3 detik
+            }
+            
+            const nis = decodedText.trim();
+            const student = students.find(s => s.nis === nis);
+
+            if (student) {
+                lastScannedNis = nis;
+                lastScannedTime = currentTime;
+                
+                catatKehadiran(student);
+            } else {
+                showToast("QR Code tidak valid / Siswa tidak ditemukan!", true);
+                // Mainkan suara error jika ada
+            }
+        }
+
+        function onScanFailure(error) {
+            // Diabaikan: ini dipanggil setiap frame saat kamera tidak menemukan QR Code
+            // Mencegah console log penuh oleh pesan error
+        }
+
+        // 6. Logika Pencatatan & Dashboard
+        function catatKehadiran(student) {
+            const now = new Date();
+            // Format YYYY-MM-DD
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            const timeStr = now.toLocaleTimeString('id-ID');
+
+            // Cek apakah sudah absen hari ini
+            const alreadyScanned = attendance.some(a => a.nis === student.nis && a.tanggal === dateStr);
+            if (alreadyScanned) {
+                showToast(`Siswa ${student.nama} sudah absen hari ini.`, true);
+                return;
+            }
+
+            const newRecord = {
+                tanggal: dateStr,
+                waktu: timeStr,
+                nis: student.nis,
+                nama: student.nama,
+                kelas: student.kelas
+            };
+
+            attendance.push(newRecord);
+            localStorage.setItem('absensi_data', JSON.stringify(attendance));
+
+            // Kirim ke Google Sheets secara otomatis jika URL Web App diatur di Pengaturan
+            if (appSettings.sheetUrl && appSettings.sheetUrl.trim() !== "") {
+                const formData = new URLSearchParams();
+                formData.append('tanggal', dateStr);
+                formData.append('waktu', timeStr);
+                formData.append('nis', student.nis);
+                formData.append('nama', student.nama);
+                formData.append('kelas', student.kelas);
+
+                fetch(appSettings.sheetUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                }).catch(err => console.error('Gagal sinkronisasi ke Spreadsheet:', err));
+            }
+
+            // Update UI Info di Halaman Scanner
+            document.getElementById('lastScanInfo').classList.remove('hidden');
+            document.getElementById('scanName').innerText = student.nama;
+            document.getElementById('scanWaktu').innerText = timeStr;
+
+            showToast(`Berhasil merekam absensi ${student.nama}`);
+            
+            // Perbarui data Dashboard di latar belakang
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            document.getElementById('dashTotalSiswa').innerText = students.length;
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
+            
+            const hadirHariIni = attendance.filter(a => a.tanggal === today);
+            document.getElementById('dashTotalHadir').innerText = hadirHariIni.length;
+
+            const tbody = document.getElementById('dashTableBody');
+            tbody.innerHTML = '';
+            
+            // Tampilkan 5 aktivitas terbaru
+            const recent = [...attendance].reverse().slice(0, 5);
+            if(recent.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-400">Belum ada aktivitas</td></tr>`;
+                return;
+            }
+
+            recent.forEach(r => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm">${r.tanggal} ${r.waktu}</td>
+                        <td class="px-4 py-3 font-mono text-sm">${r.nis}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">${r.nama}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 7. Logika Rekapitulasi & Export
+        function renderTableRekap() {
+            const filterDateInput = document.getElementById('filterDate').value;
+            const tbody = document.getElementById('tableRekap');
+            tbody.innerHTML = '';
+            
+            let filtered = attendance;
+            if (filterDateInput) {
+                filtered = attendance.filter(a => a.tanggal === filterDateInput);
+            }
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-gray-400">Tidak ada data absensi</td></tr>`;
+                return;
+            }
+
+            // Urutkan dari yang terbaru
+            filtered.sort((a, b) => {
+                if(a.tanggal !== b.tanggal) return b.tanggal.localeCompare(a.tanggal);
+                return b.waktu.localeCompare(a.waktu);
+            }).forEach(r => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="px-4 py-3 text-gray-600">${r.tanggal}</td>
+                        <td class="px-4 py-3 font-medium text-gray-800">${r.waktu}</td>
+                        <td class="px-4 py-3 font-mono text-sm">${r.nis}</td>
+                        <td class="px-4 py-3 font-medium">${r.nama}</td>
+                        <td class="px-4 py-3 text-gray-600">${r.kelas}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function exportCSV() {
+            if(attendance.length === 0) {
+                showToast("Tidak ada data untuk diekspor", true);
+                return;
+            }
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Tanggal,Waktu,NIS,Nama,Kelas\n";
+            
+            attendance.forEach(row => {
+                csvContent += `${row.tanggal},${row.waktu},${row.nis},${row.nama},${row.kelas}\n`;
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "rekap_absensi.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function clearAbsensi() {
+            if(confirm('PERINGATAN: Anda yakin ingin menghapus SEMUA data absensi? Aksi ini tidak dapat dibatalkan.')) {
+                attendance = [];
+                localStorage.removeItem('absensi_data');
+                renderTableRekap();
+                updateDashboard();
+                showToast("Semua data absensi berhasil dihapus");
+            }
+        }
+
+        // 8. Logika Pengaturan
+        function loadSettingsUI() {
+            document.getElementById('sidebarTitle').innerText = appSettings.title;
+            document.getElementById('sidebarSubtitle').innerText = appSettings.subtitle;
+            
+            const defaultLogo = "WhatsApp Image 2026-10-06 at 10.11.18_2.jpeg";
+            const currentLogo = appSettings.logo ? appSettings.logo : defaultLogo;
+            
+            document.getElementById('loginLogo').src = currentLogo;
+            document.getElementById('sidebarLogo').src = currentLogo;
+            
+            if(document.getElementById('inpSetTitle')) {
+                document.getElementById('inpSetTitle').value = appSettings.title;
+                document.getElementById('inpSetSubtitle').value = appSettings.subtitle;
+                document.getElementById('inpSetSheetUrl').value = appSettings.sheetUrl || "";
+            }
+        }
+
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function saveSettings(e) {
+            e.preventDefault();
+            const title = document.getElementById('inpSetTitle').value.trim();
+            const subtitle = document.getElementById('inpSetSubtitle').value.trim();
+            const sheetUrl = document.getElementById('inpSetSheetUrl').value.trim();
+            
+            const logoInput = document.getElementById('inpSetLogo');
+            let logoData = appSettings.logo;
+            
+            if (logoInput.files && logoInput.files[0]) {
+                const file = logoInput.files[0];
+                if (file.size > 1024 * 1024) { 
+                    showToast("Ukuran logo terlalu besar! Maksimal 1MB.", true);
+                    return;
+                }
+                try {
+                    logoData = await getBase64(file);
+                } catch (error) {
+                    showToast("Gagal memproses gambar.", true);
+                    return;
+                }
+            }
+            
+            appSettings = { title, subtitle, sheetUrl, logo: logoData };
+            localStorage.setItem('absensi_settings', JSON.stringify(appSettings));
+            
+            loadSettingsUI();
+            showToast("Pengaturan berhasil disimpan");
+        }
+
+        function backupData() {
+            const data = {
+                students: students,
+                attendance: attendance,
+                settings: appSettings
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadNode = document.createElement('a');
+            downloadNode.setAttribute("href", dataStr);
+            downloadNode.setAttribute("download", "Backup_Absensi_" + new Date().getTime() + ".json");
+            document.body.appendChild(downloadNode);
+            downloadNode.click();
+            downloadNode.remove();
+            showToast("File backup berhasil diunduh!");
+        }
+
+        function restoreData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.students && data.attendance && data.settings) {
+                        localStorage.setItem('absensi_students', JSON.stringify(data.students));
+                        localStorage.setItem('absensi_data', JSON.stringify(data.attendance));
+                        localStorage.setItem('absensi_settings', JSON.stringify(data.settings));
+                        
+                        alert('Data berhasil dipulihkan! Aplikasi akan dimuat ulang untuk menerapkan data baru.');
+                        location.reload();
+                    } else {
+                        showToast("Format file backup tidak valid!", true);
+                    }
+                } catch (err) {
+                    showToast("Gagal membaca file backup!", true);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Panggil saat aplikasi dimuat
+        loadSettingsUI();
+        
+        if(localStorage.getItem('absensi_logged_in') === 'true') {
+            login(true);
+        }
+    </script>
+</body>
+</html>
